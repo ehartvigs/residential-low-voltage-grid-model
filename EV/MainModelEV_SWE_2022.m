@@ -11,7 +11,8 @@ close all
 tic
 
 % Import GIS data file
-filename = 'Inspire_TotPop_Sweref_regionEVPerKom.shp';
+datafolder = "C:\\Griddata\\";
+filename = datafolder + "Inspire_TotPop_Sweref_regionEVPerKom.shp";
 
 AvgLLVMAX = [];
 AvgTrCap = [];
@@ -21,28 +22,29 @@ MeanTrCap = [];
 LLVMAX_save = [];
 
 % Import GIS data in given population density range (v1)
-S = shaperead(filename,'Selector',{@(v1) (v1<(80000)) && (v1>(0000) ), 'Pop'});
+S = shaperead(filename,'Selector',{@(v1) (v1<(40000)) && (v1>(12000) ), 'Pop'});
 
 % Load demand data for households.
-Demand = load('ResidentialLP.mat');
+Demand = load(datafolder + "ResidentialLP.mat");
 DemandHH = Demand.HHLoadProfile;
 DemandAP = Demand.APTLoadProfile;
 
 % Randomly assign load profile.
-HHNumber = randi(20)
-AptNumber = randi(15)
+%HHNumber = randi(20)
+%AptNumber = randi(15)
+HHNumber = 19
+AptNumber = 8
 Load = DemandHH(HHNumber,:);
 LoadAP = DemandAP(AptNumber,:);
 
 
 %% Load coincidence data
-Obj = load('coincidence50100kWh.mat');
+%Obj = load(datafolder + "coincidence50100kWh.mat");
+Obj = load(datafolder + "coincidence50_float32.mat");
 
 % For MATLAB to access the coincidence data in the network_model file, it
 % needs to be loaded as a global file. The downside is that this creates a copy of the file for
 % the network_model, and therefore takes a lot of RAM usage.
-global CoincidenceEVLine
-global coincidenceEVTR
 
 CoincidenceEVLine = Obj.coincidence;
 coincidenceEVTR =  Obj.coincidence(398,:,:);
@@ -54,6 +56,7 @@ x=vec2mat(x,6);
 y=extractfield(S,'Y');
 y=vec2mat(y,6);
 [g tmp] = size(S);
+g
 
 PeoplePerHH=2.22;
 EnergyMatrix = zeros(3,3,3);
@@ -125,11 +128,12 @@ voltageLimit = voltageLimitMatrix(pp,:);
 alpha = alphavec(mm);
 
 toc
-for k=1:g     % number of km^2 with data, 1:l
+tic
+for k=1:g     % number of km^2 with data, 1:l,     NM: parfor here
     
     % Extract population density data and number of cars per household.
     PopDensity = S(k).Pop;
-    CarsPerHH = S(k).CarsPerHH; % If adding marketshare, add here
+    CarsPerHH = S(k).CarsPerHH;
     
     % Conversion mixup with X and Y coordinates
     x_cord = mean(y(k,1:5));            
@@ -138,8 +142,8 @@ for k=1:g     % number of km^2 with data, 1:l
     % Call the reference network model
     [Vlimit CustomersPerAreaOut fuselimit type fuseout CableSize z_loop AVG_LoadProfile PDemand CustEnergyUsetmp CustomersPerTransformer...
         TrCap CustomersCalcout CustomersInitialout voltage LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr]...
-        =network_model_SWE_EV_2022(factor,PopDensity,PeoplePerHH,LoadProfileHH,LoadProfileAP1, Rgrid, Xgrid, noload, thermallimit, ...
-        alpha, voltageLimit,CarsPerHH);
+        =network_model_EV(factor,PopDensity,PeoplePerHH,LoadProfileHH,LoadProfileAP1, Rgrid, Xgrid, noload, thermallimit, ...
+        alpha, voltageLimit,CarsPerHH,CoincidenceEVLine,coincidenceEVTR);
     
     
     % Save data from each run
@@ -173,6 +177,8 @@ toc
 
 output = sum(Likelihood==0);
 
+clear CoincidenceEVLine coincidenceEVTR
+[CustomersCalc' CustomersPerTr' Transformers' TransformersCap' CustEnergyUse' PowerDemand' llvmax' Cable']
 
 %end
 

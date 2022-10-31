@@ -1,6 +1,6 @@
 function [VoltLimit CustomersPerArea FuseLimit type fuse CableSize z_loop AVG_LoadProfile PowerDemand AVGEnergy CustomersPerTransformer TrCap...
-    CustomersCalc CustomersInitial voltage LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr VoltageRange]...
-    = network_model_SWE_EV_2022(factor, Pop_density, PeoplePerHouse,HH_LoadProfile, AP_LoadProfile1, Rgrid, Xgrid, no_load, thermal_limit, alpha, voltageLimit, CarsPerHH)
+    CustomersCalc CustomersInitial voltage LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr]...
+    = network_model_EV(factor, Pop_density, PeoplePerHouse,HH_LoadProfile, AP_LoadProfile1, Rgrid, Xgrid, no_load, thermal_limit, alpha, voltageLimit, CarsPerHH,CoincidenceEVLine,coincidenceEVTR)
 % -------------------------------------------------------------------------
 % This is the modelling file that generates the low-voltage grids, and then
 % populate them with data and check for violations. The bulk of the file
@@ -28,10 +28,6 @@ function [VoltLimit CustomersPerArea FuseLimit type fuse CableSize z_loop AVG_Lo
 %                                  SECTION 1
 % ------------------------------------------------------------------------
 
-%% ---------------------------------------------------------
-% The use of global coincidence file is specifically for EV
-global CoincidenceEVLine
-global coincidenceEVTR
 
 % SET VALUE OF LAMBDA MATRIX
 % 50 for small coincidence matrix (to run on Therese laptop, otherwise 100)
@@ -190,11 +186,11 @@ for gg = n0:round(NumberOfCustomers)
     
     % Calcualte distance between low (d) and medium (dMV)
     % voltage supply points
-    d = sqrt(A_TS)/(sqrt(NubmerOfConnectionsTransformer)+1)+0.02;
+    d = sqrt(A_TS)/(sqrt(NubmerOfConnectionsTransformer)+1)+0.02;    % NM: Paper eq 15, if NubmerOfConnectionsTransformer = NC_Tr,i. But +1 is inside sqrt() in the paper. Code OK. +1 comes from assuming distance customer->square border = distance between customers. See photo. Can switch to 1/2 distance later and lose +1.
     
-    dMV = 1/(sqrt(gg)+1);       % Length of medium voltage cables
-    if mod(round(sqrt(NubmerOfConnectionsTransformer)),2)
-        n = NubmerOfConnectionsTransformer-1;
+    dMV = 1/(sqrt(gg)+1);       % Length of medium voltage cables       % NM: Part of eq 16, see line 207. Same problem with +1 inside sqrt() in the paper.
+    if mod(round(sqrt(NubmerOfConnectionsTransformer)),2)        % NM: Similar to nMV equations below, maybe follows from Manhattan geometry somehow? Elias, har du kvar härledningen? Annars gör jag ett försök själv senare.
+        n = NubmerOfConnectionsTransformer-1;                    % NM: n here is different from n set in lines 240-260 below. -1 because center transformer blocks center customer IF ODD. IF EVEN then transformer lies between customers and we need to add extra smaller lines.
     else
         n = NubmerOfConnectionsTransformer + sqrt(NubmerOfConnectionsTransformer) -2;
     end
@@ -207,8 +203,8 @@ for gg = n0:round(NumberOfCustomers)
         nMV = gg + sqrt(gg) -2;
     end
  
-    LengthLVPerTransformer = n*d;
-    LengthMV = nMV*dMV;
+    LengthLVPerTransformer = n*d;           % NM: so it seems n = NC_Tr,i in the paper eq 15, but line 189 says NC_Tr,i = NumberOfConnectionsTransformer, and lines 193 & 195 have n ~= NubmerOfConnectionsTransformer?
+    LengthMV = nMV*dMV;                     % NM: Paper eq 16 (including line 191). But gg = NT_i in the paper, but this is different from nMV?
     MV_cost = LengthMV*CostPerKmLineMV;         % Medium-voltave costs
     LV_cost = gg*LengthLVPerTransformer*CostPerKmLineLV;        % Low-voltage costs
     
@@ -242,24 +238,24 @@ LengthLVPerTransformer = CustomersPerTransformer*d;
 % Calculate the length of the longest feeder. The first two (customers = 1
 % or 2) are special cases.
 if CustomersPerTransformer == 1
-    LLVMax = 0.1;
+    LLVMax = 0.1;                                           % NM: eq 19 in the paper
     d = LLVMax;
     n = 1;
     nc = 1;
 elseif CustomersPerTransformer == 2
-    LLVMax =  LLAF_LV*sqrt(A_TS)/4 + 0.02;
+    LLVMax =  LLAF_LV*sqrt(A_TS)/4 + 0.02;                  % NM: eq 20 in the paper
     d = LLVMax;
     n = 2;
     nc = 2;
 else
-    n = round(sqrt(CustomersPerTransformer));
+    n = round(sqrt(CustomersPerTransformer));               % NM: n is customers per width or length of each square, nc is literally customers per quadrant (area).
     nc = round(CustomersPerTransformer/4);
     if n == 2
         d = LLAF_LV*sqrt(A_TS)/(n);
         LLVMax = d;
         nc = 2;
     else
-        LLVMax = LLAF_LV*sqrt(A_TS)*(n-1)/(n)+0.02;
+        LLVMax = LLAF_LV*sqrt(A_TS)*(n-1)/(n)+0.02;         % NM: eq 18 in the paper, if n = sqrt(NC_Tr), which agrees with line 251. But what is nc?
     end
 end
 
@@ -396,7 +392,7 @@ for rt=1:p
     % Check if cable current is compatible with fuse size. Otherwise
     % reduce demand through RX_multiplier.
     while I_line>max(targetFuseRatings)
-        rr = round(rr/2);
+        rr = round(rr/2);               % NM: Shouldn't mp also be set here?
         % RX_multiplier is a factor that consider multiple cables laid in parallell if needed.
         % If it is 0.5, then two cables are used, 0.25 four cables etc. 
         RX_multiplier(rt) =  RX_multiplier(rt)*0.5;     
@@ -417,7 +413,7 @@ for rt=1:p
     L_max(:,rt) = (ZmaxThick(rt)-sum(Z_loop))./targetLineImpedance';
     while sum(L_max(:,rt)>d_long(rt)) == 0
         rr = round(rr/2);
-        RX_multiplier(rt) = 0.5;
+        RX_multiplier(rt) = 0.5;                % NM: Should be RX_multiplier(rt) = RX_multiplier(rt) * 0.5
         coincidenceLine(rt) = (k1_House.*rr.*AVGEnergy+k2_House.*sqrt(rr.*AVGEnergy))./(rr.*(k1_House*AVGEnergy+k2_House*sqrt(AVGEnergy))); % Velanders formula
         P_demand(rt) = max(AVG_LoadProfile)*rr*coincidenceLine(rt);
         I_line = coincidenceLine(rt).*fuse*rr;
@@ -487,7 +483,7 @@ Vn = 400;
 V = zeros(1,p+1);
 
 % Calcualte the initial voltage drop at the transformer.
-V(1) = 400 -coincidenceTR*CustomersPerTransformer*(Transformer_R.*(fuse*230*3)+Transformer_X.*(fuse*230*3)*PowerFactor)./(Vn);
+V(1) = 400 - coincidenceTR*CustomersPerTransformer*(Transformer_R.*(fuse*230*3)+Transformer_X.*(fuse*230*3)*PowerFactor)./(Vn);
 % Calculate voltage profile along the cables.
 for kk=1:p
     V(kk+1) = V(kk)-(R(kk).*(P_demand(kk))+(X(kk)).*P_demand(kk)*PowerFactor)./(Vn);
@@ -514,7 +510,7 @@ while  min(V./Vn)<Design_voltage(2)
     
     
     V = zeros(1,p+1);
-    V(1) = 400 -min((coincidenceTR*CustomersPerTransformer*(Transformer_R.*(fuse*230*3)+Transformer_X.*(fuse*230*3).*PowerFactor)./Vn));
+    V(1) = 400 - min((coincidenceTR*CustomersPerTransformer*(Transformer_R.*(fuse*230*3)+Transformer_X.*(fuse*230*3).*PowerFactor)./Vn));
     for kk=1:p
         V(kk+1) = V(kk)-(R(kk).*(P_demand(kk))+(X(kk)).*P_demand(kk).*PowerFactor)./(Vn);
     end
@@ -615,7 +611,7 @@ CableLimit = deltaCurrentCable'>Cable;
 
 VoltageLower = min(voltage'./400);
 VoltageUpper = max(voltageUpper'./400);
-VoltageRange = max(VoltageUpper) - min(VoltageLower);
+VoltageRange = VoltageUpper - VoltageLower;
 
 % The block of code below calculates how much extra power the violation 
 % require (e.g. what is needed to avoid them), and how long duration this
@@ -671,8 +667,8 @@ idxD = max(sum(CableLimit));
 Likelihood = max([idxA idxB idxC idxD])/lambda;
 LikelihoodTr = idxC/lambda; 
 
-% Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer and 5 for cable
-[tmp Limiter] = max([0 idxA idxB idxC idxD]);
+% Limiter: 1 or 2 for voltage, 3 for transformer and 4 for cable
+[tmp Limiter] = max([idxA idxB idxC idxD]);
 
 
 CustomersPerKm = CustomersPerTransformer/LengthLVPerTransformer;

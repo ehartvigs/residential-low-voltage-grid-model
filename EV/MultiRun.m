@@ -28,7 +28,7 @@ LP = reshape(1:35,5,7);
 % end
 
 for d = 1:1
-    [tmp] = MainModelEV_SWE_2022();
+    [tmp] = Main_model_EV();
     Likelihood = [Likelihood tmp];
 end
 toc
