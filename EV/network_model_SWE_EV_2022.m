@@ -583,75 +583,70 @@ AVG_LoadProfile = AVG_LoadProfile*no_load;
 mp2 = round(mp.*RX_multiplier);
 ChargePower = 6900;     % Charge power in watt
 
-% Initial voltage drop (at the transformer)
-V0 = 400 - max((CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
-    CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
-    +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn);
-V0 = repelem(V0,length(mp),1);
 
-CEVL = reshape(CoincidenceEVLine([ceil(CarsPerHH.*mp2)],:,:),[length(mp) lambda 52560]);
-CEVL = permute(CEVL,[3 1 2]);
+  % Initial voltage drop (at the transformer)
+    V0 = 400 - max((CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
+        CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
+        +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn); % ta bort max för att behålla hela tidsserien?
+         v0s=size(V0)
+    V0 = repelem(V0,length(mp),1);
 
-% Calculate voltage drop over the cable.
-voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
 
-voltageUpper = V0 - reshape(cumsum(min(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
-
-% Calculate power demand in cable.
-deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
-    CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3)),[length(mp2) lambda] );
-
-% Calculate power demand on transformer.
-deltaPower = ((max(coincidenceTR.*AVG_LoadProfile + ...
-        CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower))).*CustomersPerTransformer;
     V1 = 400 - (CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
         CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
         +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn;
     v1s=size(V1)
     
     
-VoltageLowerLimit = (voltage./400)<voltageLimit(2);
-VoltageUpperLimit = (voltage./400)>voltageLimit(1);
-TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
-CableLimit = deltaCurrentCable'>Cable;
-
-VoltageLower = min(voltage'./400);
-VoltageUpper = max(voltageUpper'./400);
-VoltageRange = max(VoltageUpper) - min(VoltageLower);
-
-% The block of code below calculates how much extra power the violation 
-% require (e.g. what is needed to avoid them), and how long duration this
-% occurs over (in 10 min blocks). This can be used to identify
-% reinforcements. Cable demand is an vector while transformer demand is a
-% value. If required capacity to avoid violations is not wanted, the code
-% can be commented out. NOTE!! VOLTAGE VIOLATIONS ARE NOT COVERED.
-TransformerDemand = max([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
-deltaPowerSum = max(sum(((coincidenceTR.*AVG_LoadProfile + ...
-        CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
-CableDemand = sqrt(3)*400*Cable.*(max(deltaCurrentCable'./Cable) - 1);
-CableDemand = CableDemand.*(CableDemand>0);          % Unit, power (W)
-CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 min blocks in one year)
-
-
-
-
-
-
-CustomersPerKm = CustomersPerTransformer/LengthLVPerTransformer;
-CustomersCalc = CustomersPerTransformer*NumberOfTransformers;
-CustomersInitial = Pop_density/PeoplePerHousehold;
-
-voltage = 0;
-
-end
-
-
-
+    CEVL = reshape(CoincidenceEVLine([ceil(CarsPerHH.*mp2)],:,:),[length(mp) lambda 52560]);
+    CEVL = permute(CEVL,[3 1 2]);
+    
+    % Calculate voltage drop over the cable.
+    voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
+        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
     
 %    voltage1 = V1 - cumsum(mp.*(R.*(coincidenceLine.*AVG_LoadProfile(:,:))) + CarsPerHH.*CEVL.*ChargePower)...
 %        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda))./Vn);
+    
+    
+    voltageUpper = V0 - reshape(cumsum(min(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
+        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
+    
+    % Calculate power demand in cable.
+    deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
+        CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3)),[length(mp2) lambda] );
+    
+    deltaCurrentCable1 = (mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
+        CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3));
+    % Calculate power demand on transformer.
+    deltaPower = ((max(coincidenceTR.*AVG_LoadProfile + ...
+            CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower))).*CustomersPerTransformer;
+        
+        
+    VoltageLowerLimit = (voltage./400)<voltageLimit(2);
+    VoltageUpperLimit = (voltage./400)>voltageLimit(1);
+    TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
+    CableLimit = deltaCurrentCable'>Cable;
+    
+    
+    VoltageLower = min(voltage'./400);
+    VoltageUpper = max(voltageUpper'./400);
+    VoltageRange = max(VoltageUpper) - min(VoltageLower);
+    
+    % The block of code below calculates how much extra power the violation 
+    % require (e.g. what is needed to avoid them), and how long duration this
+    % occurs over (in 10 min blocks). This can be used to identify
+    % reinforcements. Cable demand is an vector while transformer demand is a
+    % value. If required capacity to avoid violations is not wanted, the code
+    % can be commented out. NOTE!! VOLTAGE VIOLATIONS ARE NOT COVERED.
+    TransformerDemand = max([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
+        TransformerDemand2 = ([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
+
+    deltaPowerSum = max(sum(((coincidenceTR.*AVG_LoadProfile + ...
+            CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
+    CableDemand = sqrt(3)*400*Cable.*(max(deltaCurrentCable'./Cable) - 1);
+    CableDemand = CableDemand.*(CableDemand>0);          % Unit, power (W)
+    CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 min blocks in one year)
     
 
     % The block of code below returns the share of occurences with violations 
@@ -678,8 +673,17 @@ end
     % and 5 for cable. 
     [tmp Limiter] = max([0 idxA idxB idxC idxD]);
 
+    
+    
+    CustomersPerKm = CustomersPerTransformer/LengthLVPerTransformer;
+    CustomersCalc = CustomersPerTransformer*NumberOfTransformers;
+    CustomersInitial = Pop_density/PeoplePerHousehold;
+    
+    voltage = 0;
+    
 
 
 
+end
 
 
