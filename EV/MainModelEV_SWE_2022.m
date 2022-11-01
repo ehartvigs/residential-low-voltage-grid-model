@@ -21,7 +21,7 @@ MeanTrCap = [];
 LLVMAX_save = [];
 
 % Import GIS data in given population density range (v1)
-S = shaperead(filename,'Selector',{@(v1) (v1<(80000)) && (v1>(0000) ), 'Pop'});
+S = shaperead(filename,'Selector',{@(v1) (v1<(80000)) && (v1>=(1000) ), 'Pop'});
 
 % Load demand data for households.
 Demand = load('ResidentialLP.mat');
@@ -33,6 +33,9 @@ HHNumber = randi(20)
 AptNumber = randi(15)
 Load = DemandHH(HHNumber,:);
 LoadAP = DemandAP(AptNumber,:);
+
+% Set market share electric vehicles. 1 = 100 %
+MarketShareEV = 1;
 
 
 %% Load coincidence data
@@ -129,7 +132,7 @@ for k=1:g     % number of km^2 with data, 1:l
     
     % Extract population density data and number of cars per household.
     PopDensity = S(k).Pop;
-    CarsPerHH = S(k).CarsPerHH; % If adding marketshare, add here
+    CarsPerHH = S(k).CarsPerHH*MarketShareEV; 
     
     % Conversion mixup with X and Y coordinates
     x_cord = mean(y(k,1:5));            
