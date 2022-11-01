@@ -606,6 +606,10 @@ deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfi
 % Calculate power demand on transformer.
 deltaPower = ((max(coincidenceTR.*AVG_LoadProfile + ...
         CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower))).*CustomersPerTransformer;
+    V1 = 400 - (CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
+        CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
+        +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn;
+    v1s=size(V1)
     
     
 VoltageLowerLimit = (voltage./400)<voltageLimit(2);
@@ -645,6 +649,10 @@ end
 
 
 
+    
+%    voltage1 = V1 - cumsum(mp.*(R.*(coincidenceLine.*AVG_LoadProfile(:,:))) + CarsPerHH.*CEVL.*ChargePower)...
+%        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda))./Vn);
+    
 
     % The block of code below returns the share of occurences with violations 
     % when running all of lambda. E.g. if 20 out of 50, it returns 
