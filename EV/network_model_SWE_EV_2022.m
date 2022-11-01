@@ -588,14 +588,12 @@ ChargePower = 6900;     % Charge power in watt
     V0 = 400 - max((CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
         CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
         +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn); % ta bort max för att behålla hela tidsserien?
-         v0s=size(V0)
     V0 = repelem(V0,length(mp),1);
 
 
     V1 = 400 - (CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
         CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
         +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn;
-    v1s=size(V1)
     
     
     CEVL = reshape(CoincidenceEVLine([ceil(CarsPerHH.*mp2)],:,:),[length(mp) lambda 52560]);
@@ -604,11 +602,11 @@ ChargePower = 6900;     % Charge power in watt
     % Calculate voltage drop over the cable.
     voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
         +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
-    
-%    voltage1 = V1 - cumsum(mp.*(R.*(coincidenceLine.*AVG_LoadProfile(:,:))) + CarsPerHH.*CEVL.*ChargePower)...
-%        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda))./Vn);
-    
-    
+
+    voltage1 = V1 - squeeze(max(cumsum(mp.*(R.*(coincidenceLine.*AVG_LoadProfile(:,:))) + CarsPerHH.*CEVL.*ChargePower...
+        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda))./Vn, [],2));
+
+    %Skippa nedan? beräknar min, men nu har vi för varje tidssteg
     voltageUpper = V0 - reshape(cumsum(min(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
         +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
     
@@ -616,12 +614,16 @@ ChargePower = 6900;     % Charge power in watt
     deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
         CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3)),[length(mp2) lambda] );
     
-    deltaCurrentCable1 = (mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
-        CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3));
+    deltaCurrentCable1 = squeeze(max((mp2.*abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
+        CarsPerHH.*CEVL.*ChargePower)/400/sqrt(3)),[],2));
+
     % Calculate power demand on transformer.
     deltaPower = ((max(coincidenceTR.*AVG_LoadProfile + ...
             CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower))).*CustomersPerTransformer;
-        
+  
+    deltaPower1 = ((coincidenceTR.*AVG_LoadProfile + ...
+            CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower)).*CustomersPerTransformer;
+
         
     VoltageLowerLimit = (voltage./400)<voltageLimit(2);
     VoltageUpperLimit = (voltage./400)>voltageLimit(1);
@@ -629,9 +631,9 @@ ChargePower = 6900;     % Charge power in watt
     CableLimit = deltaCurrentCable'>Cable;
     
     
-    VoltageLower = min(voltage'./400);
-    VoltageUpper = max(voltageUpper'./400);
-    VoltageRange = max(VoltageUpper) - min(VoltageLower);
+%     VoltageLower = min(voltage'./400);
+%     VoltageUpper = max(voltageUpper'./400);
+%     VoltageRange = max(VoltageUpper) - min(VoltageLower);
     
     % The block of code below calculates how much extra power the violation 
     % require (e.g. what is needed to avoid them), and how long duration this
