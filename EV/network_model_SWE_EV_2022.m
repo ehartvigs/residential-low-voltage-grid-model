@@ -633,46 +633,6 @@ CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 
 
 
 
-% % The block of code below returns the first occurence of a violation. However, all
-% % of lambda (EV charging coincidence matrix) is used for the calculation,
-% % so all of the occurences can be returned if needed. Just need to change
-% % what is returned.
-% idxA = find(sum(VoltageLowerLimit)~=0, 1, 'first');
-% idxB = find(sum(VoltageUpperLimit)~=0, 1, 'first');
-% idxC = find(TransformerLimit~=0, 1, 'first');
-% idxD = mod(find(CableLimit~=0, 1, 'first'),lambda);
-% 
-% if isempty(idxA)
-%     idxA = lambda;
-% end
-% if isempty(idxB)
-%     idxB = lambda;
-% end
-% if isempty(idxC)
-%     idxC = lambda;
-% end
-% if isempty(idxD)
-%     idxD = lambda;
-% end
-% 
-% Likelihood = lambda-min([idxA idxB idxC idxD]);
-% LikelihoodTr = lambda-idxC; 
-
-
-% The block of code below returns the share of occurences with violations 
-% when running all of lambda. E.g. if 20 out of 50, it returns 
-% 20/50 = 0.4. Meaning 40% of the combinations from lambda generated an
-% violation. Returns a value between 0 and 1, lower is better.
-idxA = sum(sum(VoltageLowerLimit~=0)~=0);
-idxB = sum(sum(VoltageUpperLimit~=0)~=0);
-idxC = sum(TransformerLimit);
-idxD = max(sum(CableLimit));
-
-Likelihood = max([idxA idxB idxC idxD])/lambda;
-LikelihoodTr = idxC/lambda; 
-
-% Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer and 5 for cable
-[tmp Limiter] = max([0 idxA idxB idxC idxD]);
 
 
 CustomersPerKm = CustomersPerTransformer/LengthLVPerTransformer;
@@ -686,6 +646,29 @@ end
 
 
 
+    % The block of code below returns the share of occurences with violations 
+    % when running all of lambda. E.g. if 20 out of 50, it returns 
+    % 20/50 = 0.4. Meaning 40% of the combinations from lambda generated an
+    % violation. Returns a value between 0 and 1, lower is better. Currently 
+    % Summed and then counted individually. Should be in a matrix first like 
+    % in option below. 
+     idxA = sum(sum(VoltageLowerLimit~=0)~=0);
+     idxB = sum(sum(VoltageUpperLimit~=0)~=0);
+     idxC = sum(TransformerLimit);
+     idxD = max(sum(CableLimit)); %max because we use the branch with the 
+     % largest violation
+     
+%     Likelihood = max([idxA idxB idxC idxD])/lambda; %old calculation
+%     method
+
+    ViolationMatrix = [VoltageLowerLimit', VoltageUpperLimit', TransformerLimit', max(CableLimit,[],2)];
+
+    Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
+    LikelihoodTr = idxC/lambda; 
+    
+    % Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer
+    % and 5 for cable. 
+    [tmp Limiter] = max([0 idxA idxB idxC idxD]);
 
 
 
