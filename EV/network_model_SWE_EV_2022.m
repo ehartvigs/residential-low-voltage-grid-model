@@ -602,14 +602,9 @@ ChargePower = 6900;     % Charge power in watt
     % Calculate voltage drop over the cable.
     voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
         +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
-%Den nedan är fel då den nu returnerar en spänning under 0
-    voltage1 = V1 - squeeze(max(cumsum(mp.*(R.*(coincidenceLine.*AVG_LoadProfile(:,:))) + CarsPerHH.*CEVL.*ChargePower...
-        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)), [],2))./Vn;
 
-
-    %Skippa nedan? beräknar min, men nu har vi för varje tidssteg
-    voltageUpper = V0 - reshape(cumsum(min(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
+    voltage1 = V1 - squeeze(sum((mp.*(R.*(coincidenceLine.*AVG_LoadProfile + CarsPerHH.*CEVL.*ChargePower)+...
+                X.*(coincidenceLine.*AVG_LoadProfile*PowerFactor))./Vn),2));
     
     % Calculate power demand in cable.
     deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
@@ -678,6 +673,9 @@ ChargePower = 6900;     % Charge power in watt
 
 
      Likelihood1 = squeeze((sum(max(ViolationMatrix1,[],3)~=0,2))./lambda);
+     s = size(Likelihood1);
+      maxi = max(Likelihood1, [],'all');
+      mini = min(Likelihood1, [], 'all');
     Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
     LikelihoodTr = idxC/lambda; 
     
