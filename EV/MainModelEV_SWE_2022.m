@@ -93,6 +93,8 @@ datastore = [];
 deltaV = [];
 llvmax = [];            % Length of longest feeder
 Likelihood = [];        % Share of lambda that produce no violations
+Likelihood11 = [];
+Likelihoodsum = []; 
 cap = [];
 CustPerKm = [];
 Transformers = [];      % Number of transformers
@@ -140,10 +142,9 @@ for k=1:g     % number of km^2 with data, 1:l
     
     % Call the reference network model
     [Vlimit CustomersPerAreaOut fuselimit type fuseout CableSize z_loop AVG_LoadProfile PDemand CustEnergyUsetmp CustomersPerTransformer...
-        TrCap CustomersCalcout CustomersInitialout voltage LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr]...
+        TrCap CustomersCalcout CustomersInitialout voltage LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr Likelihood11]...
         =network_model_SWE_EV_2022(factor,PopDensity,PeoplePerHH,LoadProfileHH,LoadProfileAP1, Rgrid, Xgrid, noload, thermallimit, ...
         alpha, voltageLimit,CarsPerHH);
-    
     
     % Save data from each run
     xcord = [xcord x_cord];
@@ -155,6 +156,7 @@ for k=1:g     % number of km^2 with data, 1:l
     Pop_Density = [Pop_Density PopDensity];
     CustPerKm = [CustPerKm CustomersPerKm];
     Likelihood = [Likelihood Likeli];
+    Likelihoodsum = [Likelihoodsum Likelihood11];
     Limit = [Limit Limiter'];
     FuseLimit = [FuseLimit fuselimit];
     CustomersCalc = [CustomersCalc CustomersCalcout];

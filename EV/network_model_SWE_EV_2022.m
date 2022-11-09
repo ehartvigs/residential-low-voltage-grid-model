@@ -1,5 +1,5 @@
 function [VoltLimit CustomersPerArea FuseLimit type fuse CableSize z_loop AVG_LoadProfile PowerDemand AVGEnergy CustomersPerTransformer TrCap...
-    CustomersCalc CustomersInitial voltage LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr VoltageRange]...
+    CustomersCalc CustomersInitial voltage LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr Likelihood11]...
     = network_model_SWE_EV_2022(factor, Pop_density, PeoplePerHouse,HH_LoadProfile, AP_LoadProfile1, Rgrid, Xgrid, no_load, thermal_limit, alpha, voltageLimit, CarsPerHH)
 % -------------------------------------------------------------------------
 % This is the modelling file that generates the low-voltage grids, and then
@@ -605,7 +605,7 @@ ChargePower = 6900;     % Charge power in watt
 
     voltage1 = V1 - squeeze(sum((mp.*(R.*(coincidenceLine.*AVG_LoadProfile + CarsPerHH.*CEVL.*ChargePower)+...
                 X.*(coincidenceLine.*AVG_LoadProfile*PowerFactor))./Vn),2));
-    
+
     % Calculate power demand in cable.
     deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
         CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3)),[length(mp2) lambda] );
@@ -624,17 +624,18 @@ ChargePower = 6900;     % Charge power in watt
         
     VoltageLowerLimit = (voltage./400)<voltageLimit(2);
     VoltageLowerLimit1 = (voltage1./400)<voltageLimit(2);
+%     VLL = sum(sum(VoltageLowerLimit1~=0)~=0)
     VoltageUpperLimit = (voltage./400)>voltageLimit(1);
     VoltageUpperLimit1 = (voltage1./400)>voltageLimit(1);
+%     VUL = sum(sum(VoltageUpperLimit1~=0)~=0)
     TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
     TransformerLimit1 = deltaPower1>(TransformerType*1000)*thermal_limit;
+%     TLL = sum(TransformerLimit,"all")
     CableLimit = deltaCurrentCable'>Cable;    
     CableLimit1 = deltaCurrentCable1>Cable1;
     CableLimit1 = squeeze(max(CableLimit1,[],2));
+%     CLL = sum(CableLimit1,"all")
 
-    
-%     VoltageLower = min(voltage'./400);
-%     VoltageUpper = max(voltageUpper'./400);
      VoltageRange = max(voltage1,[],'all') - min(voltage1,[],'all');
     
     % The block of code below calculates how much extra power the violation 
@@ -659,10 +660,10 @@ ChargePower = 6900;     % Charge power in watt
     % violation. Returns a value between 0 and 1, lower is better. Currently 
     % Summed and then counted individually. Should be in a matrix first like 
     % in option below. 
-     idxA = sum(sum(VoltageLowerLimit~=0)~=0);
-     idxB = sum(sum(VoltageUpperLimit~=0)~=0);
-     idxC = sum(TransformerLimit);
-     idxD = max(sum(CableLimit)); %max because we use the branch with the 
+%      idxA = sum(sum(VoltageLowerLimit~=0)~=0);
+%      idxB = sum(sum(VoltageUpperLimit~=0)~=0);
+%      idxC = sum(TransformerLimit);
+%      idxD = max(sum(CableLimit)); %max because we use the branch with the 
      % largest violation
      
 %     Likelihood = max([idxA idxB idxC idxD])/lambda; %old calculation
@@ -670,15 +671,18 @@ ChargePower = 6900;     % Charge power in watt
 
     ViolationMatrix = [VoltageLowerLimit', VoltageUpperLimit', TransformerLimit', max(CableLimit,[],2)];
     ViolationMatrix1 = cat(3,VoltageLowerLimit1, VoltageUpperLimit1, TransformerLimit1, CableLimit1);
+    ViolationMatrix1 = max(ViolationMatrix1,[],3);
 
+     Likelihood1 = sum(ViolationMatrix1~=0,2)./lambda;
+%    Likelihood1 = squeeze((sum(sum(ViolationMatrix1,3)~=0,2))./lambda);
+     Likelihood11=sum(Likelihood1);
 
-     Likelihood1 = squeeze((sum(max(ViolationMatrix1,[],3)~=0,2))./lambda);
-     s = size(Likelihood1);
-      maxi = max(Likelihood1, [],'all');
-      mini = min(Likelihood1, [], 'all');
+%      s = size(Likelihood1);
+%       maxi = max(Likelihood1, [],'all');
+%       mini = min(Likelihood1, [], 'all');
     Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
     LikelihoodTr = idxC/lambda; 
-    
+
     % Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer
     % and 5 for cable. 
     [tmp Limiter] = max([0 idxA idxB idxC idxD]);
