@@ -388,7 +388,7 @@ Z_loop = [Z_transformer*1000];
 % critera is fullfilled.
 for rt=1:p
     rr = sum(mc(rt:end));
-    mp(rt) = rr;
+    mp(rt) = rr;  % store cumulative customers in mp (and don't update it with rr anymore)
     coincidenceLine(rt) = (k1_House.*rr.*AVGEnergy+k2_House.*sqrt(rr.*AVGEnergy))./(rr.*(k1_House*AVGEnergy+k2_House*sqrt(AVGEnergy))); % Velanders formula
     P_demand(rt) = max(AVG_LoadProfile)*rr*coincidenceLine(rt);
     I_line = coincidenceLine(rt).*fuse*rr;
@@ -417,7 +417,7 @@ for rt=1:p
     L_max(:,rt) = (ZmaxThick(rt)-sum(Z_loop))./targetLineImpedance';
     while sum(L_max(:,rt)>d_long(rt)) == 0
         rr = round(rr/2);
-        RX_multiplier(rt) = 0.5;
+        RX_multiplier(rt) = RX_multiplier(rt) * 0.5;
         coincidenceLine(rt) = (k1_House.*rr.*AVGEnergy+k2_House.*sqrt(rr.*AVGEnergy))./(rr.*(k1_House*AVGEnergy+k2_House*sqrt(AVGEnergy))); % Velanders formula
         P_demand(rt) = max(AVG_LoadProfile)*rr*coincidenceLine(rt);
         I_line = coincidenceLine(rt).*fuse*rr;
@@ -426,8 +426,6 @@ for rt=1:p
         Iu = fuses_tripping_size(2,(index));
         ZmaxThick(rt) = 1000*c*Ufn/Iu;
         L_max(:,rt) = (ZmaxThick(rt)-sum(Z_loop))./targetLineImpedance';
-        mp(rt) = rr; 
-        
     end
     
     
