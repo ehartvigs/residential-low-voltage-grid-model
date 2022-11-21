@@ -463,13 +463,14 @@ end
 
 
 % Update cable resistance and reactance if cable capacity has been changed.
-id = find(ixCable==max(ixCable),1);
-for hh=1:id
-    Cable(hh) = CableCapacity(ixCable(id));
-    z_earth(hh+1) = z_earth(hh) + targetLineImpedance(ixCable(hh))*d_long(hh)*RX_multiplier(hh);
-end
-    R(hh) = Z_lineR_list(ixCable(id))*d_long(hh);
-    X(hh) = Z_lineX_list(ixCable(id))*d_long(hh);
+% ELIAS: THIS WHOLE LOOP CAN BE COMMENTED OUT
+%id = find(ixCable==max(ixCable),1);
+%for hh=1:id
+%    Cable(hh) = CableCapacity(ixCable(id));
+%    R(hh) = Z_lineR_list(ixCable(id))*d_long(hh);
+%    X(hh) = Z_lineX_list(ixCable(id))*d_long(hh);
+%    z_earth(hh+1) = z_earth(hh) + targetLineImpedance(ixCable(hh))*d_long(hh)*RX_multiplier(hh);
+%end
 
 
 CustomersPerArea = NumberOfCustomers;
