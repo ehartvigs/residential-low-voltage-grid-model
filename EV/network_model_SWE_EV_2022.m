@@ -494,7 +494,7 @@ end
 % Update the cable capacity if voltage profile is outside limits.
 while  min(V./Vn)<Design_voltage(2)
     [val pos] = min(ixCable);
-    if min(ixCable) == 7
+    if val == 7
         [val2 pos] = max(RX_multiplier);
         RX_multiplier(pos) = RX_multiplier(pos)*0.5;
         R(pos) = Z_lineR_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
@@ -526,15 +526,15 @@ z_earth = z_earth/1000;     % Setting correct unit for impedance (per m)
 while  max(z_earth)>Design_Z
     
     [val pos] = min(ixCable);
-    if min(ixCable) == 7
+    if val == 7
         [val2 pos] = max(RX_multiplier);
         RX_multiplier(pos) = RX_multiplier(pos)*0.5;
         
         for gg = pos:length(ixCable)
-            z_earth(gg+1) = z_earth(gg) + Z_Line(val+1)*d_long(gg)*RX_multiplier(gg)/1000;
+            z_earth(gg+1) = z_earth(gg) + Z_Line(val)*d_long(gg)*RX_multiplier(gg)/1000;
         end
-        R(pos) = Z_lineR_list(val+1)*d_long(pos)*RX_multiplier(pos)/1000;
-        X(pos) = Z_lineX_list(val+1)*d_long(pos)*RX_multiplier(pos)/1000;
+        R(pos) = Z_lineR_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
+        X(pos) = Z_lineX_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
         ixCable(pos) = val;
         Cable(pos) = CableCapacity(val)*(1/RX_multiplier(pos));
     else
