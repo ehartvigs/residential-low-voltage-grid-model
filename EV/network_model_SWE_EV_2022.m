@@ -594,10 +594,10 @@ CEVL = permute(CEVL,[3 1 2]);
 
 % Calculate voltage drop over the cable.
 voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
+    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn, 2),[length(mp) lambda]);
 
 voltageUpper = V0 - reshape(cumsum(min(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
+    +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn, 2),[length(mp) lambda]);
 
 % Calculate power demand in cable.
 deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
@@ -663,8 +663,8 @@ CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 
 % when running all of lambda. E.g. if 20 out of 50, it returns 
 % 20/50 = 0.4. Meaning 40% of the combinations from lambda generated an
 % violation. Returns a value between 0 and 1, lower is better.
-idxA = sum(sum(VoltageLowerLimit~=0)~=0);
-idxB = sum(sum(VoltageUpperLimit~=0)~=0);
+idxA = sum(sum(VoltageLowerLimit~=0, 1)~=0);
+idxB = sum(sum(VoltageUpperLimit~=0, 1)~=0);
 idxC = sum(TransformerLimit);
 idxD = max(sum(CableLimit));
 
