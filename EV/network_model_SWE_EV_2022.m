@@ -590,11 +590,9 @@ ChargePower = 6900;     % Charge power in watt
         +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn); % ta bort max för att behålla hela tidsserien?
     V0 = repelem(V0,length(mp),1);
 
-
     V1 = 400 - (CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
         CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
         +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn;
-    
     
     CEVL = reshape(CoincidenceEVLine([ceil(CarsPerHH.*mp2)],:,:),[length(mp) lambda 52560]);
     CEVL = permute(CEVL,[3 1 2]);
@@ -624,17 +622,13 @@ ChargePower = 6900;     % Charge power in watt
         
     VoltageLowerLimit = (voltage./400)<voltageLimit(2);
     VoltageLowerLimit1 = (voltage1./400)<voltageLimit(2);
-%     VLL = sum(sum(VoltageLowerLimit1~=0)~=0)
     VoltageUpperLimit = (voltage./400)>voltageLimit(1);
     VoltageUpperLimit1 = (voltage1./400)>voltageLimit(1);
-%     VUL = sum(sum(VoltageUpperLimit1~=0)~=0)
     TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
     TransformerLimit1 = deltaPower1>(TransformerType*1000)*thermal_limit;
-%     TLL = sum(TransformerLimit,"all")
     CableLimit = deltaCurrentCable'>Cable;    
     CableLimit1 = deltaCurrentCable1>Cable1;
     CableLimit1 = squeeze(max(CableLimit1,[],2));
-%     CLL = sum(CableLimit1,"all")
 
      VoltageRange = max(voltage1,[],'all') - min(voltage1,[],'all');
     
@@ -660,10 +654,10 @@ ChargePower = 6900;     % Charge power in watt
     % violation. Returns a value between 0 and 1, lower is better. Currently 
     % Summed and then counted individually. Should be in a matrix first like 
     % in option below. 
-%      idxA = sum(sum(VoltageLowerLimit~=0)~=0);
-%      idxB = sum(sum(VoltageUpperLimit~=0)~=0);
-%      idxC = sum(TransformerLimit);
-%      idxD = max(sum(CableLimit)); %max because we use the branch with the 
+%       idxA = sum(sum(VoltageLowerLimit~=0)~=0);
+%       idxB = sum(sum(VoltageUpperLimit~=0)~=0);
+%       idxC = sum(TransformerLimit);
+%       idxD = max(sum(CableLimit)); %max because we use the branch with the 
      % largest violation
      
 %     Likelihood = max([idxA idxB idxC idxD])/lambda; %old calculation
@@ -677,15 +671,11 @@ ChargePower = 6900;     % Charge power in watt
 %    Likelihood1 = squeeze((sum(sum(ViolationMatrix1,3)~=0,2))./lambda);
      Likelihood11=sum(Likelihood1);
 
-%      s = size(Likelihood1);
-%       maxi = max(Likelihood1, [],'all');
-%       mini = min(Likelihood1, [], 'all');
     Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
-    LikelihoodTr = idxC/lambda; 
 
     % Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer
     % and 5 for cable. 
-    [tmp Limiter] = max([0 idxA idxB idxC idxD]);
+%    [tmp Limiter] = max([0 idxA idxB idxC idxD]);
 
     
     
