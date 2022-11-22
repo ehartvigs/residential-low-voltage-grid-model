@@ -1,5 +1,5 @@
 function [VoltLimit CustomersPerArea FuseLimit type fuse CableSize z_loop AVG_LoadProfile PowerDemand AVGEnergy CustomersPerTransformer TrCap...
-    CustomersCalc CustomersInitial voltage LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr Likelihood11]...
+    CustomersCalc CustomersInitial VoltageLower LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr LikelihoodVL LikelihoodVU LikelihoodCL Likelihood11]...
     = network_model_SWE_EV_2022(factor, Pop_density, PeoplePerHouse,HH_LoadProfile, AP_LoadProfile1, Rgrid, Xgrid, no_load, thermal_limit, alpha, voltageLimit, CarsPerHH)
 % -------------------------------------------------------------------------
 % This is the modelling file that generates the low-voltage grids, and then
@@ -630,8 +630,12 @@ ChargePower = 6900;     % Charge power in watt
     CableLimit1 = deltaCurrentCable1>Cable1;
     CableLimit1 = squeeze(max(CableLimit1,[],2));
 
-     VoltageRange = max(voltage1,[],'all') - min(voltage1,[],'all');
+
+    VoltageRange = max(voltage1,[],'all') - min(voltage1,[],'all');
+    VoltageLower = min(voltage1,[],'all');
+
     
+
     % The block of code below calculates how much extra power the violation 
     % require (e.g. what is needed to avoid them), and how long duration this
     % occurs over (in 10 min blocks). This can be used to identify
@@ -642,7 +646,7 @@ ChargePower = 6900;     % Charge power in watt
         TransformerDemand2 = ([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
 
     deltaPowerSum = max(sum(((coincidenceTR.*AVG_LoadProfile + ...
-            CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
+         CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
     CableDemand = sqrt(3)*400*Cable.*(max(deltaCurrentCable'./Cable) - 1);
     CableDemand = CableDemand.*(CableDemand>0);          % Unit, power (W)
     CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 min blocks in one year)
@@ -667,11 +671,20 @@ ChargePower = 6900;     % Charge power in watt
     ViolationMatrix1 = cat(3,VoltageLowerLimit1, VoltageUpperLimit1, TransformerLimit1, CableLimit1);
     ViolationMatrix1 = max(ViolationMatrix1,[],3);
 
-     Likelihood1 = sum(ViolationMatrix1~=0,2)./lambda;
-%    Likelihood1 = squeeze((sum(sum(ViolationMatrix1,3)~=0,2))./lambda);
-     Likelihood11=sum(Likelihood1);
+    LikelihoodAll = sum(ViolationMatrix1~=0,2)./lambda;
+    LikelihoodVLt = sum(VoltageLowerLimit1~=0,2)./lambda;
+    LikelihoodVUt = sum(VoltageUpperLimit1~=0,2)./lambda;
+    LikelihoodTLt = sum(TransformerLimit1~=0,2)./lambda;
+    LikelihoodCLt = sum(CableLimit1~=0,2)./lambda;
+
+    Likelihood11=sum(LikelihoodAll);
 
     Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
+    LikelihoodVL = sum(VoltageLowerLimit1,"all")/lambda;
+    LikelihoodVU = sum(VoltageUpperLimit1,"all")/lambda;
+    LikelihoodCL = sum(CableLimit1,"all")/lambda;
+    LikelihoodTr = sum(TransformerLimit1,"all")/lambda;
+
 
     % Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer
     % and 5 for cable. 
