@@ -21,7 +21,7 @@ MeanTrCap = [];
 LLVMAX_save = [];
 
 % Import GIS data in given population density range (v1)
-S = shaperead(filename,'Selector',{@(v1) (v1<(80000)) && (v1>=(1000) ), 'Pop'});
+S = shaperead(filename,'Selector',{@(v1) (v1<(4000)) && (v1>=(2000) ), 'Pop'});
 
 % Load demand data for households.
 Demand = load('ResidentialLP.mat');
@@ -110,13 +110,18 @@ CustomersPerTr = [];
 CustEnergyUse = [];
 CustomersPerArea = [];
 Cable = [];
+CarsPerHHv =[];
 Pop_area = [];
 PV_efficiency = [];
 VoltLimit = [];
+VoltageLower = [];
 FuseLimit = [];
 xcord = [];
 ycord = [];
 LikelihoodTr = [];
+LikelihoodVU = [];
+LikelihoodVL = [];
+LikelihoodCL = [];
 
 Production = zeros(1,52414);
 Xgrid = Zgrid(2)/sqrt(1+RXratio(2)^2);
@@ -142,18 +147,19 @@ for k=1:g     % number of km^2 with data, 1:l
     
     % Call the reference network model
     [Vlimit CustomersPerAreaOut fuselimit type fuseout CableSize z_loop AVG_LoadProfile PDemand CustEnergyUsetmp CustomersPerTransformer...
-        TrCap CustomersCalcout CustomersInitialout voltage LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr Likelihood11]...
+        TrCap CustomersCalcout CustomersInitialout VoltageLow LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr LikVL LikVU LikCL Likelihood11]...
         =network_model_SWE_EV_2022(factor,PopDensity,PeoplePerHH,LoadProfileHH,LoadProfileAP1, Rgrid, Xgrid, noload, thermallimit, ...
         alpha, voltageLimit,CarsPerHH);
     
     % Save data from each run
     xcord = [xcord x_cord];
     ycord = [ycord y_cord];
-    deltaV = [deltaV voltage];
+%    deltaV = [deltaV voltage];
     llvmax = [llvmax LV];
     cap = [cap ll'];
     Transformers = [Transformers Trans];
     Pop_Density = [Pop_Density PopDensity];
+    CarsPerHHv = [CarsPerHHv CarsPerHH];
     CustPerKm = [CustPerKm CustomersPerKm];
     Likelihood = [Likelihood Likeli];
     Likelihoodsum = [Likelihoodsum Likelihood11];
@@ -168,8 +174,13 @@ for k=1:g     % number of km^2 with data, 1:l
     Z_earth = [Z_earth z_loop];
     Cable = [Cable CableSize];
     LikelihoodTr = [LikelihoodTr LikTr];
+    LikelihoodVL = [LikelihoodVL LikVL];
+    LikelihoodVU = [LikelihoodVU LikVU];
+    LikelihoodCL = [LikelihoodCL LikCL];
     Pop_area = [Pop_area type];
     VoltLimit = [VoltLimit Vlimit];
+    VoltageLower =[VoltageLower VoltageLow];
+
     CustomersPerArea = [CustomersPerArea CustomersPerAreaOut];
 
 end
