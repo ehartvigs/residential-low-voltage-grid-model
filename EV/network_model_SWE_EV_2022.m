@@ -388,7 +388,7 @@ Z_loop = [Z_transformer*1000];
 % critera is fullfilled.
 for rt=1:p
     rr = sum(mc(rt:end));
-    mp(rt) = rr;
+    mp(rt) = rr;  % store cumulative customers in mp (and don't update it with rr anymore)
     coincidenceLine(rt) = (k1_House.*rr.*AVGEnergy+k2_House.*sqrt(rr.*AVGEnergy))./(rr.*(k1_House*AVGEnergy+k2_House*sqrt(AVGEnergy))); % Velanders formula
     P_demand(rt) = max(AVG_LoadProfile)*rr*coincidenceLine(rt);
     I_line = coincidenceLine(rt).*fuse*rr;
@@ -417,7 +417,7 @@ for rt=1:p
     L_max(:,rt) = (ZmaxThick(rt)-sum(Z_loop))./targetLineImpedance';
     while sum(L_max(:,rt)>d_long(rt)) == 0
         rr = round(rr/2);
-        RX_multiplier(rt) = 0.5;
+        RX_multiplier(rt) = RX_multiplier(rt) * 0.5;
         coincidenceLine(rt) = (k1_House.*rr.*AVGEnergy+k2_House.*sqrt(rr.*AVGEnergy))./(rr.*(k1_House*AVGEnergy+k2_House*sqrt(AVGEnergy))); % Velanders formula
         P_demand(rt) = max(AVG_LoadProfile)*rr*coincidenceLine(rt);
         I_line = coincidenceLine(rt).*fuse*rr;
@@ -426,8 +426,6 @@ for rt=1:p
         Iu = fuses_tripping_size(2,(index));
         ZmaxThick(rt) = 1000*c*Ufn/Iu;
         L_max(:,rt) = (ZmaxThick(rt)-sum(Z_loop))./targetLineImpedance';
-        mp(rt) = rr; 
-        
     end
     
     
@@ -465,13 +463,14 @@ end
 
 
 % Update cable resistance and reactance if cable capacity has been changed.
-id = find(ixCable==max(ixCable),1);
-for hh=1:id
-    Cable(hh) = CableCapacity(ixCable(id));
-    R(hh) = Z_lineR_list(ixCable(id))*d_long(id);
-    X(hh) = Z_lineX_list(ixCable(id))*d_long(id);
-    z_earth(hh+1) = z_earth(hh) + targetLineImpedance(ixCable(hh))*d_long(hh)*RX_multiplier(hh);
-end
+% ELIAS: THIS WHOLE LOOP CAN BE COMMENTED OUT
+%id = find(ixCable==max(ixCable),1);
+%for hh=1:id
+%    Cable(hh) = CableCapacity(ixCable(id));
+%    R(hh) = Z_lineR_list(ixCable(id))*d_long(hh);
+%    X(hh) = Z_lineX_list(ixCable(id))*d_long(hh);
+%    z_earth(hh+1) = z_earth(hh) + targetLineImpedance(ixCable(hh))*d_long(hh)*RX_multiplier(hh);
+%end
 
 
 CustomersPerArea = NumberOfCustomers;
@@ -496,7 +495,7 @@ end
 % Update the cable capacity if voltage profile is outside limits.
 while  min(V./Vn)<Design_voltage(2)
     [val pos] = min(ixCable);
-    if min(ixCable) == 7
+    if val == 7
         [val2 pos] = max(RX_multiplier);
         RX_multiplier(pos) = RX_multiplier(pos)*0.5;
         R(pos) = Z_lineR_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
@@ -528,15 +527,15 @@ z_earth = z_earth/1000;     % Setting correct unit for impedance (per m)
 while  max(z_earth)>Design_Z
     
     [val pos] = min(ixCable);
-    if min(ixCable) == 7
+    if val == 7
         [val2 pos] = max(RX_multiplier);
         RX_multiplier(pos) = RX_multiplier(pos)*0.5;
         
         for gg = pos:length(ixCable)
-            z_earth(gg+1) = z_earth(gg) + Z_Line(val+1)*d_long(gg)*RX_multiplier(gg)/1000;
+            z_earth(gg+1) = z_earth(gg) + Z_Line(val)*d_long(gg)*RX_multiplier(gg)/1000;
         end
-        R(pos) = Z_lineR_list(val+1)*d_long(pos)*RX_multiplier(pos)/1000;
-        X(pos) = Z_lineX_list(val+1)*d_long(pos)*RX_multiplier(pos)/1000;
+        R(pos) = Z_lineR_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
+        X(pos) = Z_lineX_list(val)*d_long(pos)*RX_multiplier(pos)/1000;
         ixCable(pos) = val;
         Cable(pos) = CableCapacity(val)*(1/RX_multiplier(pos));
     else
@@ -599,7 +598,7 @@ ChargePower = 6900;     % Charge power in watt
     
     % Calculate voltage drop over the cable.
     voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn),[length(mp) lambda]);
+        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn, 2),[length(mp) lambda]);
 
     voltage1 = V1 - squeeze(sum((mp.*(R.*(coincidenceLine.*AVG_LoadProfile + CarsPerHH.*CEVL.*ChargePower)+...
                 X.*(coincidenceLine.*AVG_LoadProfile*PowerFactor))./Vn),2));
