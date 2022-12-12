@@ -583,10 +583,6 @@ ChargePower = 6900;     % Charge power in watt
 AdditionalVoltageLimit = 0.92;
 
   % Initial voltage drop (at the transformer)
-    V0 = 400 - max((CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
-        CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
-        +Transformer_X.*(coincidenceTR.*AVG_LoadProfile))./Vn); % ta bort max för att behålla hela tidsserien?
-    V0 = repelem(V0,length(mp),1);
 
     V1 = 400 - (CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
         CarsPerHH.*ChargePower.*reshape(coincidenceEVTR(1,:,:),[lambda 52560])'))...
@@ -595,37 +591,22 @@ AdditionalVoltageLimit = 0.92;
     CEVL = reshape(CoincidenceEVLine([ceil(CarsPerHH.*mp2)],:,:),[length(mp) lambda 52560]);
     CEVL = permute(CEVL,[3 1 2]);
     
-    % Calculate voltage drop over the cable.
-    voltage = V0 - reshape(cumsum(max(mp.*(R.*(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + CarsPerHH.*CEVL.*ChargePower)...
-        +X.*repelem(coincidenceLine.*AVG_LoadProfile*PowerFactor,1,1,lambda)))./Vn, 2),[length(mp) lambda]);
 
     voltage1 = V1 - squeeze(sum((mp.*(R.*(coincidenceLine.*AVG_LoadProfile + CarsPerHH.*CEVL.*ChargePower)+...
                 X.*(coincidenceLine.*AVG_LoadProfile*PowerFactor))./Vn),2));
-
-    % Calculate power demand in cable.
-    deltaCurrentCable = reshape((mp2.*max(abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
-        CarsPerHH.*CEVL.*ChargePower))/400/sqrt(3)),[length(mp2) lambda] );
     
     deltaCurrentCable1 = (mp2.*abs(repelem(coincidenceLine.*AVG_LoadProfile,1,1,lambda) + ...
         CarsPerHH.*CEVL.*ChargePower)/400/sqrt(3));
-
-    % Calculate power demand on transformer.
-    deltaPower = ((max(coincidenceTR.*AVG_LoadProfile + ...
-            CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower))).*CustomersPerTransformer;
   
     deltaPower1 = ((coincidenceTR.*AVG_LoadProfile + ...
             CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower)).*CustomersPerTransformer;
     Cable1=repmat(Cable,52560,1,lambda);
 
         
-    VoltageLowerLimit = (voltage./400)<voltageLimit(2);
     VoltageLowerLimit1 = (voltage1./400)<voltageLimit(2);
-    VoltageUpperLimit = (voltage./400)>voltageLimit(1);
     VoltageLowerLimit2 = (voltage1./400)<AdditionalVoltageLimit;
     VoltageUpperLimit1 = (voltage1./400)>voltageLimit(1);
-    TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
-    TransformerLimit1 = deltaPower1>(TransformerType*1000)*thermal_limit;
-    CableLimit = deltaCurrentCable'>Cable;    
+    TransformerLimit1 = deltaPower1>(TransformerType*1000)*thermal_limit;  
     CableLimit1 = deltaCurrentCable1>Cable1;
     CableLimit1 = squeeze(max(CableLimit1,[],2));
 
@@ -641,32 +622,16 @@ AdditionalVoltageLimit = 0.92;
     % reinforcements. Cable demand is an vector while transformer demand is a
     % value. If required capacity to avoid violations is not wanted, the code
     % can be commented out. NOTE!! VOLTAGE VIOLATIONS ARE NOT COVERED.
-    TransformerDemand = max([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
-        TransformerDemand2 = ([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
+%     TransformerDemand = max([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
+%         TransformerDemand2 = ([TransformerType*(deltaPower./max((TransformerType*1000)*thermal_limit)-1) 0]);      % Unit, power (kVA)
+% 
+%     deltaPowerSum = max(sum(((coincidenceTR.*AVG_LoadProfile + ...
+%          CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
+%     CableDemand = sqrt(3)*400*Cable.*(max(deltaCurrentCable'./Cable) - 1);
+%     CableDemand = CableDemand.*(CableDemand>0);          % Unit, power (W)
+%     CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 min blocks in one year)
 
-    deltaPowerSum = max(sum(((coincidenceTR.*AVG_LoadProfile + ...
-         CarsPerHH.*(reshape(coincidenceEVTR(1,:,:),[lambda 52560])').*ChargePower).*CustomersPerTransformer)>(TransformerType*1000*thermal_limit)));     % Unit, time (number of 10 min blocks in one year)
-    CableDemand = sqrt(3)*400*Cable.*(max(deltaCurrentCable'./Cable) - 1);
-    CableDemand = CableDemand.*(CableDemand>0);          % Unit, power (W)
-    CableDemandSum = sum(deltaCurrentCable'>Cable);      % Unit, time (number of 10 min blocks in one year)
-    
 
-    % The block of code below returns the share of occurences with violations 
-    % when running all of lambda. E.g. if 20 out of 50, it returns 
-    % 20/50 = 0.4. Meaning 40% of the combinations from lambda generated an
-    % violation. Returns a value between 0 and 1, lower is better. Currently 
-    % Summed and then counted individually. Should be in a matrix first like 
-    % in option below. 
-%       idxA = sum(sum(VoltageLowerLimit~=0)~=0);
-%       idxB = sum(sum(VoltageUpperLimit~=0)~=0);
-%       idxC = sum(TransformerLimit);
-%       idxD = max(sum(CableLimit)); %max because we use the branch with the 
-     % largest violation
-     
-%     Likelihood = max([idxA idxB idxC idxD])/lambda; %old calculation
-%     method
-
-    ViolationMatrix = [VoltageLowerLimit', VoltageUpperLimit', TransformerLimit', max(CableLimit,[],2)];
     ViolationMatrix1 = cat(3,VoltageLowerLimit1, VoltageUpperLimit1, TransformerLimit1, CableLimit1);
     ViolationMatrix1 = max(ViolationMatrix1,[],3);
 
@@ -679,25 +644,26 @@ AdditionalVoltageLimit = 0.92;
 
     Likelihood11=sum(LikelihoodAll);
 
-    Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
     LikelihoodVL = sum(VoltageLowerLimit1,"all")/lambda;
     LikelihoodVL2 = sum(VoltageLowerLimit2,"all")/lambda;
     LikelihoodVU = sum(VoltageUpperLimit1,"all")/lambda;
     LikelihoodCL = sum(CableLimit1,"all")/lambda;
     LikelihoodTr = sum(TransformerLimit1,"all")/lambda;
 
+    LikelihoodTime = sum(ViolationMatrix1~=0,2)./lambda;
+    Likelihood = sum(sum(ViolationMatrix1~=0,1)~=0)/lambda;  %kolla riktning på denna!!
 
     % Limiter: 1 for no violation, 2 or 3 for voltage, 4 for transformer
     % and 5 for cable. 
 %    [tmp Limiter] = max([0 idxA idxB idxC idxD]);
 
     
-    
     CustomersPerKm = CustomersPerTransformer/LengthLVPerTransformer;
     CustomersCalc = CustomersPerTransformer*NumberOfTransformers;
     CustomersInitial = Pop_density/PeoplePerHousehold;
     
     voltage = 0;
+%    voltage = voltage1;
     
 
 
