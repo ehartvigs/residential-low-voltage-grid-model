@@ -1,5 +1,5 @@
 function [VoltLimit CustomersPerArea FuseLimit type fuse CableSize z_loop AVG_LoadProfile PowerDemand AVGEnergy CustomersPerTransformer TrCap...
-    CustomersCalc CustomersInitial VoltageLower LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr LikelihoodVL LikelihoodVU LikelihoodCL Likelihood11]...
+    CustomersCalc CustomersInitial VoltageLower LLVMax solcap CustomersPerKm NumberOfTransformers NumberOfCustomers Likelihood Limiter LikelihoodTr LikelihoodVL LikelihoodVL2 LikelihoodVU LikelihoodCL Likelihood11 voltage]...
     = network_model_SWE_EV_2022(factor, Pop_density, PeoplePerHouse,HH_LoadProfile, AP_LoadProfile1, Rgrid, Xgrid, no_load, thermal_limit, alpha, voltageLimit, CarsPerHH)
 % -------------------------------------------------------------------------
 % This is the modelling file that generates the low-voltage grids, and then
@@ -562,7 +562,6 @@ AVG_LoadProfile = AVG_LoadProfile*no_load;
 
 
 
-
 % ------------------------------------------------------------------------
 %                                  SECTION 4
 % ------------------------------------------------------------------------
@@ -581,7 +580,7 @@ AVG_LoadProfile = AVG_LoadProfile*no_load;
 
 mp2 = round(mp.*RX_multiplier);
 ChargePower = 6900;     % Charge power in watt
-
+AdditionalVoltageLimit = 0.92;
 
   % Initial voltage drop (at the transformer)
     V0 = 400 - max((CustomersPerTransformer*(Transformer_R.*(coincidenceTR.*AVG_LoadProfile+...
@@ -622,6 +621,7 @@ ChargePower = 6900;     % Charge power in watt
     VoltageLowerLimit = (voltage./400)<voltageLimit(2);
     VoltageLowerLimit1 = (voltage1./400)<voltageLimit(2);
     VoltageUpperLimit = (voltage./400)>voltageLimit(1);
+    VoltageLowerLimit2 = (voltage1./400)<AdditionalVoltageLimit;
     VoltageUpperLimit1 = (voltage1./400)>voltageLimit(1);
     TransformerLimit = deltaPower>(TransformerType*1000)*thermal_limit;
     TransformerLimit1 = deltaPower1>(TransformerType*1000)*thermal_limit;
@@ -672,6 +672,7 @@ ChargePower = 6900;     % Charge power in watt
 
     LikelihoodAll = sum(ViolationMatrix1~=0,2)./lambda;
     LikelihoodVLt = sum(VoltageLowerLimit1~=0,2)./lambda;
+    LikelihoodVL2t = sum(VoltageLowerLimit2~=0,2)./lambda;
     LikelihoodVUt = sum(VoltageUpperLimit1~=0,2)./lambda;
     LikelihoodTLt = sum(TransformerLimit1~=0,2)./lambda;
     LikelihoodCLt = sum(CableLimit1~=0,2)./lambda;
@@ -680,6 +681,7 @@ ChargePower = 6900;     % Charge power in watt
 
     Likelihood = sum(sum(ViolationMatrix~=0,2)~=0)/lambda;
     LikelihoodVL = sum(VoltageLowerLimit1,"all")/lambda;
+    LikelihoodVL2 = sum(VoltageLowerLimit2,"all")/lambda;
     LikelihoodVU = sum(VoltageUpperLimit1,"all")/lambda;
     LikelihoodCL = sum(CableLimit1,"all")/lambda;
     LikelihoodTr = sum(TransformerLimit1,"all")/lambda;
