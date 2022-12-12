@@ -122,6 +122,7 @@ LikelihoodTr = [];
 LikelihoodVU = [];
 LikelihoodVL = [];
 LikelihoodCL = [];
+voltagemat = [];
 
 Production = zeros(1,52414);
 Xgrid = Zgrid(2)/sqrt(1+RXratio(2)^2);
@@ -147,7 +148,7 @@ for k=1:g     % number of km^2 with data, 1:l
     
     % Call the reference network model
     [Vlimit CustomersPerAreaOut fuselimit type fuseout CableSize z_loop AVG_LoadProfile PDemand CustEnergyUsetmp CustomersPerTransformer...
-        TrCap CustomersCalcout CustomersInitialout VoltageLow LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr LikVL LikVU LikCL Likelihood11]...
+        TrCap CustomersCalcout CustomersInitialout VoltageLow LV ll CustomersPerKm Trans ConnectionDensity Likeli Limiter LikTr LikVL LikVL2 LikVU LikCL Likelihood11 voltage]...
         =network_model_SWE_EV_2022(factor,PopDensity,PeoplePerHH,LoadProfileHH,LoadProfileAP1, Rgrid, Xgrid, noload, thermallimit, ...
         alpha, voltageLimit,CarsPerHH);
     
@@ -180,6 +181,7 @@ for k=1:g     % number of km^2 with data, 1:l
     Pop_area = [Pop_area type];
     VoltLimit = [VoltLimit Vlimit];
     VoltageLower =[VoltageLower VoltageLow];
+    voltagemat = [voltagemat voltage];
 
     CustomersPerArea = [CustomersPerArea CustomersPerAreaOut];
 
